@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdict — Review Authenticity Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header class="topbar">
+  <div class="topbar__mark">
+    <span class="topbar__stamp">V</span>
+    <span class="topbar__word">VERDICT</span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="analyze">01 · Analyze</button>
+    <button class="tab" data-tab="scan">02 · Scan URL</button>
+    <button class="tab" data-tab="dashboard">03 · Casefile</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__eyebrow">review forensics — case no. <span id="caseNo">40,432-A</span></div>
+    <h1 class="hero__title">Every review<br>leaves a <em>trace.</em></h1>
+    <p class="hero__sub">Paste a review or a product URL. The model reads word choice, sentiment
+      inflation, and structure the same way a forensic examiner reads a document —
+      then shows you exactly which words it flagged.</p>
+    <p class="hero__scope">Scope note: trained to detect <strong>AI/template-generated review
+      text</strong> (the standard fake-review research definition), not just reviews that
+      merely "sound" exaggerated. A genuine review can use enthusiastic language and still be flagged genuine.</p>
+    <div class="hero__stats" id="heroStats">
+      <div><span class="num">91.4%</span><span class="lbl">model F1 score</span></div>
+      <div><span class="num">40,432</span><span class="lbl">labeled reviews trained on</span></div>
+      <div><span class="num">6</span><span class="lbl">evidence words per verdict</span></div>
+    </div>
+  </section>
+
+  <!-- PANEL: ANALYZE -->
+  <section class="panel active" id="panel-analyze">
+    <div class="casefile">
+      <div class="casefile__label">EXHIBIT A — SUBMITTED TEXT</div>
+      <textarea id="reviewInput" placeholder="Paste a review here. e.g. &quot;This product completely changed my life! Best purchase ever, 10/10 would recommend to everyone I know!!!&quot;"></textarea>
+      <div class="casefile__row">
+        <button class="btn btn--primary" id="analyzeBtn">Run Analysis →</button>
+        <span class="hint">or try a <a href="#" id="sampleFake">flagged sample</a> / <a href="#" id="sampleReal">clean sample</a></span>
+      </div>
+    </div>
+
+    <div class="verdict-zone" id="verdictZone"></div>
+  </section>
+
+  <!-- PANEL: SCAN URL -->
+  <section class="panel" id="panel-scan">
+    <div class="casefile">
+      <div class="casefile__label">EXHIBIT B — PRODUCT LISTING URL</div>
+      <input type="text" id="urlInput" placeholder="https://www.amazon.in/product-reviews/... or a Flipkart product page">
+      <div class="casefile__row">
+        <button class="btn btn--primary" id="scanBtn">Scan Reviews →</button>
+        <span class="hint">reads visible review text from the page HTML</span>
+      </div>
+      <div class="notice" id="scanNotice">
+        <strong>Reliability note:</strong> Amazon and Flipkart actively block server-side
+        scraping (bot detection, CAPTCHAs, JS-rendered content). This works best on pages
+        that render reviews in plain HTML. When it's blocked, paste the review text
+        directly into <button class="linklike" data-goto="analyze">Analyze</button> instead —
+        that path never fails.
+      </div>
+    </div>
+    <div class="verdict-zone" id="scanResults"></div>
+  </section>
+
+  <!-- PANEL: DASHBOARD -->
+  <section class="panel" id="panel-dashboard">
+    <div class="dash-grid">
+      <div class="dash-card dash-card--big">
+        <div class="dash-card__label">Fake vs Genuine — all-time</div>
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="dash-card dash-card--wide">
+        <div class="dash-card__label">Scans per day (last 14 days)</div>
+        <canvas id="trendChart"></canvas>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card__label">Total scanned</div>
+        <div class="dash-card__big" id="statTotal">—</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card__label">Flagged as fake</div>
+        <div class="dash-card__big dash-card__big--rust" id="statFakePct">—</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card__label">Avg. model confidence</div>
+        <div class="dash-card__big" id="statConf">—</div>
+      </div>
+      <div class="dash-card dash-card--wide">
+        <div class="dash-card__label">By source</div>
+        <canvas id="sourceChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>Logistic Regression + TF-IDF · trained on the Salminen et al. (2022) Amazon reviews corpus</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

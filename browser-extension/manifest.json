@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Verdict — Review Authenticity Scanner",
+  "version": "1.0.0",
+  "description": "Flags likely AI-generated reviews inline on Amazon and Flipkart product pages.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://www.amazon.in/*", "https://www.amazon.com/*",
+    "https://www.flipkart.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Verdict — scan reviews on this page"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.in/*", "https://www.amazon.com/*",
+        "https://www.flipkart.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
