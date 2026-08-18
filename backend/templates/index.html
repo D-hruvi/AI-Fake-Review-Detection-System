@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Forensics — Fake Review Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f1efe9;
+    --paper-raised: #fbfaf7;
+    --ink: #1b2027;
+    --ink-soft: #565348;
+    --rule: #d8d4c8;
+    --fake: #a3402c;
+    --fake-bg: #f4e2dc;
+    --real: #2f5d43;
+    --real-bg: #dfe9de;
+    --accent: #8a6d3b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 24px;
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Newsreader', serif;
+    font-weight: 500;
+    font-size: 34px;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .dek {
+    color: var(--ink-soft);
+    font-size: 15px;
+    max-width: 56ch;
+  }
+
+  .caveat {
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    border-left: 3px solid var(--accent);
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.6;
+  }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: 16px;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink);
+    resize: vertical;
+    line-height: 1.7;
+  }
+
+  textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    gap: 16px;
+  }
+
+  .wordcount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper-raised);
+    border: none;
+    padding: 12px 22px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #error {
+    margin-top: 12px;
+    color: var(--fake);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    display: none;
+  }
+
+  #result {
+    margin-top: 48px;
+    display: none;
+  }
+
+  .verdict-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .stamp {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 30px;
+    padding: 6px 18px;
+    border: 3px solid currentColor;
+    border-radius: 3px;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+
+  .stamp.fake { color: var(--fake); }
+  .stamp.real { color: var(--real); }
+
+  .confidence {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  .confidence strong { color: var(--ink); }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+
+  .annotated {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    line-height: 2.1;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    padding: 20px;
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+
+  mark.fake-mark {
+    background: var(--fake-bg);
+    color: var(--fake);
+    padding: 1px 3px;
+    border-radius: 2px;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--fake);
+  }
+
+  mark.real-mark {
+    background: var(--real-bg);
+    color: var(--real);
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 32px;
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .swatch.fake-sw { background: var(--fake); }
+  .swatch.real-sw { background: var(--real); }
+
+  .signals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .signal-col h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+    font-weight: 500;
+  }
+
+  .signal-col.fake-col h3 { color: var(--fake); }
+  .signal-col.real-col h3 { color: var(--real); }
+
+  .signal-item {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+
+  @media (max-width: 560px) {
+    .signals { grid-template-columns: 1fr; }
+    h1 { font-size: 27px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Review Forensics — Case Analysis Tool</div>
+      <h1>Is this review real?</h1>
+      <p class="dek">Paste a review below. The model flags language patterns statistically associated with fabricated reviews and shows its reasoning inline.</p>
+      <div class="caveat">
+        NOTE ON RELIABILITY — trained on hotel reviews (Chicago corpus) plus a small set of LLM-written fakes from a single generator. Detection of that specific generator's style may be inflated by author-specific phrasing rather than general "AI-written" signal. Treat output as a signal, not a verdict.
+      </div>
+    </header>
+
+    <label for="reviewInput">Review text</label>
+    <textarea id="reviewInput" placeholder="Paste a hotel or product review here (at least a couple of sentences)…"></textarea>
+    <div class="row">
+      <span class="wordcount" id="wordcount">0 words</span>
+      <button id="analyzeBtn">Analyze review</button>
+    </div>
+    <div id="error"></div>
+
+    <div id="result">
+      <div class="verdict-row">
+        <span class="stamp" id="stampEl"></span>
+        <span class="confidence">confidence <strong id="confidenceEl"></strong></span>
+      </div>
+
+      <div class="legend">
+        <span><span class="swatch fake-sw"></span> pushes toward fake</span>
+        <span><span class="swatch real-sw"></span> pushes toward real</span>
+      </div>
+
+      <div class="section-label">Annotated text</div>
+      <div class="annotated" id="annotatedEl"></div>
+
+      <div class="signals">
+        <div class="signal-col fake-col">
+          <h3>Top fake signals</h3>
+          <div id="fakeSignalsEl"></div>
+        </div>
+        <div class="signal-col real-col">
+          <h3>Top real signals</h3>
+          <div id="realSignalsEl"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      TF-IDF + XGBoost classifier, trained on the Ott et al. Deceptive Opinion Spam Corpus augmented with LLM-authored fakes. SHAP (TreeExplainer) used for per-word attribution. Research prototype — not a substitute for platform-level review moderation.
+    </footer>
+  </div>
+
+<script>
+  const textarea = document.getElementById('reviewInput');
+  const wordcount = document.getElementById('wordcount');
+  const btn = document.getElementById('analyzeBtn');
+  const errorEl = document.getElementById('error');
+  const resultEl = document.getElementById('result');
+
+  textarea.addEventListener('input', () => {
+    const words = textarea.value.trim().split(/\s+/).filter(Boolean).length;
+    wordcount.textContent = `${words} word${words === 1 ? '' : 's'}`;
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function annotateText(text, fakeWords, realWords) {
+    const fakeSet = new Set(fakeWords.map(w => w.toLowerCase()));
+    const realSet = new Set(realWords.map(w => w.toLowerCase()));
+    const tokens = text.split(/(\s+)/);
+    return tokens.map(tok => {
+      const clean = tok.toLowerCase().replace(/[^a-z']/g, '');
+      if (fakeSet.has(clean)) return `<mark class="fake-mark">${escapeHtml(tok)}</mark>`;
+      if (realSet.has(clean)) return `<mark class="real-mark">${escapeHtml(tok)}</mark>`;
+      return escapeHtml(tok);
+    }).join('');
+  }
+
+  btn.addEventListener('click', async () => {
+    const text = textarea.value.trim();
+    errorEl.style.display = 'none';
+    resultEl.style.display = 'none';
+
+    if (!text) {
+      errorEl.textContent = 'Paste a review first.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorEl.textContent = data.error || 'Something went wrong.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const stampEl = document.getElementById('stampEl');
+      stampEl.textContent = data.prediction === 'fake' ? 'LIKELY FAKE' : 'LIKELY GENUINE';
+      stampEl.className = 'stamp ' + (data.prediction === 'fake' ? 'fake' : 'real');
+
+      document.getElementById('confidenceEl').textContent = Math.round(data.confidence * 100) + '%';
+
+      const fakeWords = data.top_fake_signals.map(s => s.word.split(' ').pop());
+      const realWords = data.top_real_signals.map(s => s.word.split(' ').pop());
+      document.getElementById('annotatedEl').innerHTML = annotateText(text, fakeWords, realWords);
+
+      const fakeContainer = document.getElementById('fakeSignalsEl');
+      fakeContainer.innerHTML = data.top_fake_signals.length
+        ? data.top_fake_signals.map(s => `<div class="signal-item"><span>${escapeHtml(s.word)}</span><span>+${s.shap.toFixed(3)}</span></div>`).join('')
+        : '<div class="signal-item">none detected</div>';
+
+      const realContainer = document.getElementById('realSignalsEl');
+      realContainer.innerHTML = data.top_real_signals.length
+        ? data.top_real_signals.map(s => `<div class="signal-item"><span>${escapeHtml(s.word)}</span><span>${s.shap.toFixed(3)}</span></div>`).join('')
+        : '<div class="signal-item">none detected</div>';
+
+      resultEl.style.display = 'block';
+    } catch (e) {
+      errorEl.textContent = 'Request failed. Is the server running?';
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Analyze review';
+    }
+  });
+</script>
+</body>
+</html>
